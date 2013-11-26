@@ -16,7 +16,6 @@ define duplicity::monitored_job(
 )
 {
   include duplicity::params
-  include duplicity::packages
 
   $spoolfile = "${duplicity::params::job_spool}/${name}.sh"
 

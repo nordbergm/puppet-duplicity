@@ -47,7 +47,7 @@ describe 'duplicity::job' do
       should contain_file(spoolfile) \
         .with_content(/^export CLOUDFILES_USERNAME='some_id'$/)\
         .with_content(/^export CLOUDFILES_APIKEY='some_key'$/)\
-        .with_content(/^duplicity --full-if-older-than 30D --s3-use-new-style --no-encryption --include '\/etc\/' --exclude '\*\*' \/ 'cf\+http:\/\/somebucket'$/)
+        .with_content(/^duplicity --full-if-older-than 30D --s3-use-new-style --include '\/etc\/' --exclude '\*\*' \/ 'cf\+http:\/\/somebucket'$/)
     end
   end
 
@@ -67,7 +67,7 @@ describe 'duplicity::job' do
       should contain_file(spoolfile) \
         .with_content(/^export AWS_ACCESS_KEY_ID='some_id'$/)\
         .with_content(/^export AWS_SECRET_ACCESS_KEY='some_key'$/)\
-        .with_content(/^duplicity --full-if-older-than 30D --s3-use-new-style --no-encryption --include '\/etc\/' --exclude '\*\*' \/ 's3\+http:\/\/somebucket\/#{fqdn}\/some_backup_name\/'$/)
+        .with_content(/^duplicity --full-if-older-than 30D --s3-use-new-style --include '\/etc\/' --exclude '\*\*' \/ 's3\+http:\/\/somebucket\/#{fqdn}\/some_backup_name\/'$/)
     end
 
     it "should make a full backup every X days" do
@@ -109,13 +109,13 @@ describe 'duplicity::job' do
 
     it "should be able to handle a specified remove-older-than time" do
       should contain_file(spoolfile) \
-        .with_content(/remove-older-than 7D.* --no-encryption --force.*/)
+        .with_content(/remove-older-than 7D.* --force.*/)
     end
   end
 
-  context 'duplicity with pubkey encryption' do
+  context 'duplicity with passphrase encryption' do
 
-    some_pubkey_id = '15ABDA79'
+    some_passphrase = '15ABDA79'
     fqdn = 'somehost.domaindomain.org'
 
     let(:params) {
@@ -124,21 +124,14 @@ describe 'duplicity::job' do
         :directory    => '/etc/',
         :dest_id      => 'some_id',
         :dest_key     => 'some_key',
-        :pubkey_id    => some_pubkey_id,
+        :passphrase   => some_passphrase,
         :spoolfile    => spoolfile,
       }
     }
 
-    it "should use pubkey encryption if keyid is provided" do
+    it "should use passphrase encryption if passphrase is provided" do
       should contain_file(spoolfile) \
-        .with_content(/--encrypt-key #{some_pubkey_id}/)
-    end
-
-    it "should download and import the specified pubkey" do
-      should contain_exec("duplicity-pgp-param-#{some_pubkey_id}") \
-        .with_command("gpg --keyserver subkeys.pgp.net --recv-keys #{some_pubkey_id}") \
-        .with_path("/usr/bin:/usr/sbin:/bin") \
-        .with_unless("gpg --list-key #{some_pubkey_id}")
+        .with_content(/export PASSPHRASE='#{some_passphrase}'/)
     end
   end
 
@@ -214,6 +207,26 @@ describe 'duplicity::job' do
     it "should prepend pre_command to cronjob" do
       should contain_file(spoolfile) \
         .with_content(/^mysqldump database && /)
+    end
+  end
+
+  context "with post_command" do
+
+    let(:params) {
+      {
+        :bucket       => 'somebucket',
+        :directory    => '/root/mysqldump',
+        :dest_id      => 'some_id',
+        :dest_key     => 'some_key',
+        :pre_command  => 'mysqldump database',
+        :post_command => 'flush something',
+        :spoolfile    => spoolfile,
+      }
+    }
+
+    it "should append post_command to cronjob" do
+      should contain_file(spoolfile) \
+        .with_content(/^&& flush something/)
     end
   end
 

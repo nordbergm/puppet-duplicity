@@ -14,6 +14,8 @@ describe 'duplicity', :type => :define do
 
   let(:spoolfile) { "/var/spool/duplicity/#{title}.sh" }
 
+  let(:spoolfile_command) { "/var/spool/duplicity/#{title}.sh >> /var/log/duplicity/#{title}.log 2>&1" }
+
   let(:params) {
     {
       :bucket       => 'somebucket',
@@ -26,7 +28,7 @@ describe 'duplicity', :type => :define do
   it "adds a cronjob at midnight by default" do
 
     should contain_cron(title) \
-      .with_command(spoolfile) \
+      .with_command(spoolfile_command) \
       .with_minute(0) \
       .with_hour(0)
   end
@@ -77,7 +79,7 @@ describe 'duplicity', :type => :define do
 
     it "should be able to use the globally configured cloud key pair" do
       should contain_cron(title) \
-        .with_command(spoolfile)
+        .with_command(spoolfile_command)
 
       should contain_file(spoolfile) \
         .with_content(/^export AWS_ACCESS_KEY_ID='some_id'$/)\

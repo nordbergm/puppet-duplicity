@@ -6,18 +6,18 @@ define duplicity::job(
   $dest_key = undef,
   $folder = undef,
   $cloud = undef,
-  $pubkey_id = undef,
+  $passphrase = undef,
   $hour = undef,
   $minute = undef,
   $full_if_older_than = undef,
   $remove_older_than = undef,
   $pre_command = undef,
+  $post_command = undef,
   $default_exit_code = undef,
   $spoolfile,
 ) {
 
   include duplicity::params
-  include duplicity::packages
 
   $_bucket = $bucket ? {
     undef => $duplicity::params::bucket,
@@ -44,11 +44,6 @@ define duplicity::job(
     default => $cloud
   }
 
-  $_pubkey_id = $pubkey_id ? {
-    undef => $duplicity::params::pubkey_id,
-    default => $pubkey_id
-  }
-
   $_hour = $hour ? {
     undef => $duplicity::params::hour,
     default => $hour
@@ -66,12 +61,12 @@ define duplicity::job(
 
   $_pre_command = $pre_command ? {
     undef => '',
-    default => "${pre_command} && "
+    default => $pre_command
   }
 
-  $_encryption = $_pubkey_id ? {
-    undef => '--no-encryption',
-    default => "--encrypt-key ${_pubkey_id}"
+  $_post_command = $post_command ? {
+    undef => '',
+    default => $post_command
   }
 
   $_remove_older_than = $remove_older_than ? {
@@ -122,7 +117,12 @@ define duplicity::job(
 
   $_remove_older_than_command = $_remove_older_than ? {
     undef => '',
-    default => " && duplicity remove-older-than ${_remove_older_than} --s3-use-new-style ${_encryption} --force ${_target_url}"
+    default => "duplicity remove-older-than ${_remove_older_than} --s3-use-new-style --force ${_target_url}"
+  }
+
+  $_passphrase = $passphrase ? {
+    undef => '',
+    default => "export PASSPHRASE='${passphrase}'"
   }
 
   file { $spoolfile:
@@ -130,9 +130,5 @@ define duplicity::job(
     content => template('duplicity/file-backup.sh.erb'),
     owner   => 'root',
     mode    => '0700',
-  }
-
-  if ($_pubkey_id and !defined(Duplicity::Gpg[$_pubkey_id])){
-    @duplicity::gpg{ $_pubkey_id: }
   }
 }

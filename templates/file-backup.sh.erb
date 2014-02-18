@@ -9,7 +9,7 @@ trap "" HUP WINCH
 <% end %>
 
 <%= @_passphrase %>
-<% @_environment.each do |key,value|-%>
+<% @_environment.sort.map do |key,value|-%>
 export <%= key -%>='<%= value -%>'
 <% end-%>
 
